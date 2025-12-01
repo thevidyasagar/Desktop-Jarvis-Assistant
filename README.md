@@ -92,3 +92,65 @@ High-level flow:
 
 ### 1. Clone the Repository
 
+git clone https://github.com/thevidyasagar/Desktop-Jarvis-Assistant.git
+
+
+## 2. Create & Activate Virtual Environment ##
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# Linux / macOS
+# source .venv/bin/activate
+
+## 3. Install Dependencies ##
+pip install -r requirements.txt
+
+(Make sure requirements.txt contains all required packages like fastapi, langchain, openai, porcupine, uvicorn, etc.)
+
+## 🔐 Environment Variables ##
+
+Create a .env file in the project root:
+
+OPENAI_API_KEY=your_openai_api_key_here
+VECTOR_DB_PATH=./data/vector_store
+PORCUPINE_ACCESS_KEY=your_porcupine_access_key_here
+
+Add any other keys/config you use (TTS provider, additional APIs, etc.).
+
+## ▶️ Running the Project ##
+## 1. Start the Backend (FastAPI) ##
+uvicorn app.main:app --reload
+
+
+or if your entry file is different, update the path accordingly.
+
+## 2. Start the Desktop Assistant / HUD ##
+
+If you have a separate script for the UI:
+
+-python main.py
+
+This typically:
+
+Starts the HUD interface
+
+Connects to the FastAPI backend
+
+Starts the wake-word listener
+
+## 🗣 Example Voice Commands ##
+
+You can say things like:
+
+“Jarvis, what’s the weather today?”
+
+“Jarvis, open YouTube.”
+
+“Jarvis, summarize this text.”
+
+“Jarvis, remind me to study at 9 PM.”
+
+“Jarvis, what did we discuss yesterday?” (uses RAG memory)
+
+You can extend the command engine to add your own custom actions.
+
