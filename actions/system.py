@@ -1,6 +1,7 @@
 import os
 import time
 import pyautogui
+import subprocess
 
 def volume_control(action_type):
     """Controls system volume."""
@@ -76,6 +77,63 @@ def system_power(action_type):
         elif action_type == "SHUTDOWN":
             os.system("shutdown /s /t 5")
             return "Shutting down the computer."
+        elif action_type == "LOCK":
+            os.system("rundll32.exe user32.dll,LockWorkStation")
+            return "Laptop locked."
     except Exception as e:
         print("Power Error:", e)
         return "Failed to execute power state."
+
+# --- NEW ADVANCED CONTROLS ---
+
+def get_system_stats():
+    """Returns a string description of CPU, RAM and Battery status."""
+    try:
+        cpu = subprocess.check_output('powershell "(Get-CimInstance Win32_Processor).LoadPercentage"', shell=True, text=True).strip()
+        ram = subprocess.check_output('powershell "[int](((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / (Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize) * 100)"', shell=True, text=True).strip()
+        battery = subprocess.check_output('powershell "(Get-CimInstance Win32_Battery).EstimatedChargeRemaining"', shell=True, text=True).strip()
+        
+        return f"Sir, your CPU load is at {cpu} percent, you have {ram} percent RAM free, and your battery is currently at {battery} percent charge."
+    except Exception as e:
+        return f"Failed to retrieve system stats: {e}"
+
+def set_brightness(level):
+    """Sets screen brightness (0-100)."""
+    try:
+        level = max(0, min(100, int(level)))
+        cmd = f'powershell "Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods | Invoke-WmiMethod -MethodName WmiSetBrightness -ArgumentList 0,{level}"'
+        subprocess.run(cmd, shell=True)
+        return f"Screen brightness adjusted to {level} percent."
+    except Exception as e:
+        return f"Brightness adjustment failed: {e}"
+
+def toggle_wifi(state):
+    """Toggles WiFi admin state."""
+    try:
+        admin_state = "enabled" if state.lower() == "on" else "disabled"
+        subprocess.run(f'powershell "netsh interface set interface Wi-Fi admin={admin_state}"', shell=True)
+        return f"WiFi has been turned {state}."
+    except Exception as e:
+        return f"WiFi toggle failed: {e}"
+
+def system_optimize():
+    """Clears temporary files to optimize performance."""
+    try:
+        subprocess.run('powershell "Remove-Item $env:TEMP\* -Recurse -Force -ErrorAction SilentlyContinue"', shell=True)
+        return "Optimization complete. Temporary files have been cleared."
+    except Exception as e:
+        return f"Optimization failed: {e}"
+
+def get_active_window_title():
+    """Detects the title of the currently focused window."""
+    try:
+        # Using PowerShell for robust native detection
+        cmd = 'powershell "(Get-Process | Where-Object { $_.MainWindowHandle -eq (Get-ForegroundWindow) }).MainWindowTitle"'
+        title = subprocess.check_output(cmd, shell=True, text=True).strip()
+        return title if title else "Desktop"
+    except Exception:
+        return "Unknown"
+    
+def get_foreground_window():
+    # Helper for PowerShell
+    pass

@@ -8,8 +8,10 @@ from email.mime.text import MIMEText
 
 # Try importing the new modules, gracefully degrading if not available yet
 try:
-    from actions.system import volume_control, media_control, window_control, take_screenshot, system_power
+    from actions.system import volume_control, media_control, window_control, take_screenshot, system_power, get_system_stats, set_brightness, toggle_wifi, system_optimize
     from actions.web import google_search, youtube_search, wikipedia_search, amazon_search, duckduckgo_search, stackoverflow_search
+    from actions.developer import create_project, write_file, execute_code, open_vscode
+    from actions.files import smart_search, open_file_safe, delete_to_recycle_bin, rename_file, create_directory
 except ImportError as e:
     print("Action Import Error:", e)
 
@@ -19,7 +21,11 @@ except ImportError as e:
 
 def open_app(app_name):
     try:
-        app_name = app_name.lower()
+        if ":" in app_name: # Handle specialized app targets like vscode:project
+            tag, project = app_name.split(":", 1)
+            if tag == "vscode" or tag == "code":
+                return open_vscode(project)
+                
         if app_name == "notepad":
             subprocess.Popen(["notepad.exe"])
         elif app_name == "calculator" or app_name == "calc":
@@ -27,8 +33,9 @@ def open_app(app_name):
         elif app_name == "cmd" or app_name == "commandprompt":
             subprocess.Popen(["cmd.exe"])
         elif app_name == "chrome":
-            # Just launching chrome might need path, or try os.system
             os.system("start chrome")
+        elif app_name == "vscode" or app_name == "code":
+            subprocess.Popen(["code", "."], shell=True)
         else:
             return "App unhandled or unrecognized."
         return f"Opened {app_name}."
@@ -133,9 +140,43 @@ def execute_action(action_dict):
         # handled manually or executed directly
         return system_power(action.replace("SYSTEM_", ""))
 
-    if action == "SEND_WHATSAPP_NAME":
-        return send_whatsapp_by_name(value["name"], value["message"])
-    if action == "SEND_EMAIL":
-        return send_email(value["to"], value["subject"], value["body"])
+    if action == "CREATE_PROJECT":
+        return create_project(value)
+    if action == "WRITE_FILE" and isinstance(value, dict):
+        return write_file(value["project"], value["path"], value["content"])
+    if action == "RUN_CODE" and isinstance(value, dict):
+        return execute_code(value["project"], value["path"])
+
+    if action == "RENAME_FILE" and isinstance(value, dict):
+        return rename_file(value["path"], value["new_name"])
+    if action == "DELETE_FILE":
+        return delete_to_recycle_bin(value)
+    if action == "CREATE_DIR":
+        if isinstance(value, dict): return create_directory(value["name"], value.get("parent"))
+        return create_directory(value)
+    if action == "OPEN_FILE":
+        return open_file_safe(value)
+
+    if action == "SYSTEM_INFO":
+        return get_system_stats()
+    if action == "SET_SYSTEM" and isinstance(value, dict):
+        if value["type"] == "brightness": return set_brightness(value["value"])
+        if value["type"] == "wifi": return toggle_wifi(value["value"])
+    if action == "OPTIMIZE":
+        return system_optimize()
+    if action == "HOTKEY" and isinstance(value, list):
+        pyautogui.hotkey(*value)
+        return f"Executing hotkey: {'+'.join(value)}"
+
+    if action == "CLICK_AT" and value:
+        x, y = value.get("x"), value.get("y")
+        pyautogui.click(x, y)
+        return f"Clicked at {x}, {y}."
+
+    if action == "SCROLL" and value:
+        direction = str(value).lower()
+        if direction == "down": pyautogui.scroll(-500)
+        elif direction == "up": pyautogui.scroll(500)
+        return f"Scrolled {direction}."
 
     return None

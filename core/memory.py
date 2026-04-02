@@ -7,6 +7,8 @@ MAX_HISTORY = 20
 class MemoryManager:
     def __init__(self):
         self.memory = {
+            "user_profile": {},
+            "reminders": [],
             "last_opened_app": None,
             "last_executed_cmd": None,
             "action_frequency": {},
@@ -71,6 +73,8 @@ class MemoryManager:
 
     def clear_memory(self):
         self.memory = {
+            "user_profile": {},
+            "reminders": [],
             "last_opened_app": None,
             "last_executed_cmd": None,
             "action_frequency": {},
@@ -107,6 +111,20 @@ class MemoryManager:
         favorites = ", ".join([f"{k} ({v}x)" for k, v in sorted_freqs[:3]])
         ctx += f"FAVORITE COMMANDS: {favorites if favorites else 'None yet'}\n"
         
+        # User Portrait (Long Term Memory)
+        profile = self.memory.get("user_profile", {})
+        if profile:
+            ctx += "\n--- USER PROFILE (Long Term Memory) ---\n"
+            for k, v in profile.items():
+                ctx += f"- {k.title()}: {v}\n"
+        
+        # Persistent Reminders
+        reminders = self.memory.get("reminders", [])
+        if reminders:
+            ctx += "\n--- SCHEDULED REMINDERS (Persistent) ---\n"
+            for r in reminders:
+                ctx += f"- [{time.ctime(r['time'])}] {r['msg']}\n"
+        
         # Injects the active vision status without bloat
         vs = self.memory.get("vision_state")
         if vs:
@@ -136,3 +154,39 @@ class MemoryManager:
     def clear_pending_action(self):
         self.memory["pending_action"] = None
         self.memory["pending_action_time"] = 0
+
+    # --- ADVANCED PERSONALITY & REMINDER METHODS ---
+    
+    def update_user_profile(self, key, value):
+        """Stores or updates a persistent personal detail."""
+        if "user_profile" not in self.memory: self.memory["user_profile"] = {}
+        self.memory["user_profile"][key.lower()] = value
+        self.save_memory()
+        return f"Sir, I've noted down your {key} as {value}."
+
+    def delete_user_profile_item(self, key):
+        """Deletes a specific persistent detail."""
+        key = key.lower()
+        if "user_profile" in self.memory and key in self.memory["user_profile"]:
+            del self.memory["user_profile"][key]
+            self.save_memory()
+            return f"I have forgotten your {key}, Sir."
+        return f"Sir, I don't appear to have a record of your {key}."
+
+    def add_reminder(self, timestamp, message):
+        """Adds a scheduled task that survives restarts."""
+        if "reminders" not in self.memory: self.memory["reminders"] = []
+        self.memory["reminders"].append({"time": timestamp, "msg": message})
+        # Sort reminders by time
+        self.memory["reminders"].sort(key=lambda x: x["time"])
+        self.save_memory()
+        return f"Reminder set for {time.ctime(timestamp)}: {message}"
+
+    def get_due_reminders(self):
+        """Retrieves and clears reminders that have passed their scheduled time."""
+        now = time.time()
+        due = [r for r in self.memory["reminders"] if r["time"] <= now]
+        if due:
+            self.memory["reminders"] = [r for r in self.memory["reminders"] if r["time"] > now]
+            self.save_memory()
+        return due

@@ -7,8 +7,11 @@ from core.brain import ask_jarvis
 from core.planner import generate_plan
 from core.action import execute_action
 from core.memory import MemoryManager
-from core.proactive import get_proactive_suggestion
 from core.vision import start_vision, stop_vision
+from core.screen import analyze_screen, get_pixel_coordinates, show_visual_highlight
+from actions.files import smart_search
+from core.proactive import get_proactive_suggestion
+from actions.system import volume_control, media_control, window_control, take_screenshot, system_power, get_active_window_title
 
 WAKE_PATTERNS = ["sara", "sar", "sa", "sra", "saara", "tara", "zara", "zarah"]
 
@@ -123,13 +126,47 @@ def start_veda():
                     memory.add_history("DISABLE_VISION", None, "Camera Disabled")
                     continue
                     
+                if action == "SEARCH_FILE":
+                    speak(f"Searching for {value}...")
+                    results = smart_search(value)
+                    if results:
+                        top = results[0]
+                        speak(f"I found a match: {top['name']}. Should I open it?")
+                        # Save the actual open action as a pending action
+                        memory.set_pending_action([{"action": "OPEN_FILE", "value": top["path"]}])
+                        continue
+                    else:
+                        speak(f"Sir, I couldn't find any file matching {value}. Would you like to try a different name?")
+                        continue
+
+                if action == "VISUAL_CLICK":
+                    speak(f"Analyzing the screen for the {value}...")
+                    box = analyze_screen(value)
+                    if box:
+                        coords = get_pixel_coordinates(box)
+                        show_visual_highlight(box)
+                        speak(f"I found it! Should I proceed to click the {value} highlighted on your screen?")
+                        # Save the actual click action as a pending action for the user to confirm
+                        memory.set_pending_action([{"action": "CLICK_AT", "value": {"x": coords[0], "y": coords[1]}}])
+                        continue
+                    else:
+                        speak(f"Sir, I couldn't clearly locate the {value}. Would you like me to try another scan?")
+                        continue
+
+                if action == "UPDATE_USER_PROFILE":
+                    speak(memory.update_user_profile(value.get("key"), value.get("value")))
+                    continue
+
+                if action == "DELETE_USER_PROFILE":
+                    speak(memory.delete_user_profile_item(value))
+                    continue
+
                 if action == "SCHEDULE_REMINDER":
                     if isinstance(value, dict):
                         delay = value.get("delay_seconds", 0)
                         msg = value.get("message", "Reminder")
-                        threading.Thread(target=schedule_thread, args=(delay, msg), daemon=True).start()
-                        speak(f"I will remind you in {delay} seconds.")
-                        memory.add_history("SCHEDULE_REMINDER", f"{delay}s", msg)
+                        target_time = time.time() + delay
+                        speak(memory.add_reminder(target_time, msg))
                     continue
                 
                 # Execute standard task via action.py
