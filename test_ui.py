@@ -7,8 +7,8 @@ from voice.listen import listen
 from voice.speak import speak
 import time
 
-print("Veda test started")
-speak("Veda test started. Speak anything.")
+print("Sara test started")
+speak("Sara test started. Speak anything.")
 
 while True:
     text, lang = listen()

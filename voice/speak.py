@@ -11,11 +11,11 @@ PITCH = "+2Hz"
 
 def speak(text):
     if not text: return
-    print(f"💬 JOYA: {text}")
+    print(f"💬 SARA: {text}")
 
     async def _speak():
         communicate = edge_tts.Communicate(text=text, voice=VOICE, rate=RATE, pitch=PITCH)
-        temp_file = os.path.join(tempfile.gettempdir(), f"joya_{int(time.time())}.mp3")
+        temp_file = os.path.join(tempfile.gettempdir(), f"sara_{int(time.time())}.mp3")
         await communicate.save(temp_file)
 
         pygame.mixer.init()

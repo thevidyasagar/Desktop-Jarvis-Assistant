@@ -8,11 +8,12 @@ def ask_jarvis(user_input, history=None, lang="en"):
     if history is None:
         history = []
 
-    system_prompt = SYSTEM_PROMPT
+    system_prompt = SYSTEM_PROMPT + "\nRespond primarily in professional English. However, if the user speaks entirely in Hindi, you may respond in Hindi to maintain a natural flow. For mixed language (Hinglish) or technical commands, always stick to English."
     if lang == "hi":
-        system_prompt += "\nRespond in Hindi."
+        system_prompt += "\nThe user spoke in Hindi; you may reply in Hindi if appropriate."
     else:
-        system_prompt += "\nRespond in English."
+        system_prompt += "\nStick to professional English."
+
 
     contents = [
         {"role": "user", "parts": [{"text": system_prompt}]},
@@ -22,7 +23,7 @@ def ask_jarvis(user_input, history=None, lang="en"):
 
     try:
         response = client.models.generate_content(
-            model="gemini-1.0-pro",  # ✅ WORKING
+            model="gemini-2.5-flash",  # Updated to the new generation model
             contents=contents
         )
         reply = response.text.strip()
