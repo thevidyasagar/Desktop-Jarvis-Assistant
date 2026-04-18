@@ -4,7 +4,7 @@ import whisper
 
 DEVICE = 9
 RATE = 48000
-SECONDS = 4
+SECONDS = 2
 
 model = whisper.load_model("tiny.en")
 

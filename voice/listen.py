@@ -1,9 +1,19 @@
 import sounddevice as sd
 import numpy as np
-import whisper
 import webrtcvad
-import noisereduce as nr
 import time
+
+# Lazy load whisper to avoid heavy DLL loading on module import
+_whisper_model = None
+
+def get_whisper_model():
+    global _whisper_model
+    if _whisper_model is None:
+        import whisper
+        print("🎤 Loading Whisper Base...")
+        _whisper_model = whisper.load_model("base")
+        print("✅ Whisper ready")
+    return _whisper_model
 
 # ======================
 # 🎙️ AUDIO CONFIG
@@ -13,15 +23,12 @@ SAMPLE_RATE = 16000
 CHANNELS = 1
 MIN_VOLUME = 0.005  # RMS Fallback threshold
 
-# --- NEW CONFIG ---
+# --- VAD CONFIG ---
 VAD_MODE = 2  # 0: Normal, 1: Low Bitrate, 2: Aggressive, 3: Very Aggressive
 DEBUG_AUDIO = True  # Set to True to see [V] vs [-] for debugging
+MIN_SPEECH_CHUNKS = 6  # ~180ms minimum speech to trigger recording
 
 vad = webrtcvad.Vad(VAD_MODE)
-
-print("🎤 Loading Whisper Base...")
-model = whisper.load_model("base")
-print("✅ Whisper ready")
 
 
 def calibrate_mic(seconds=1.5):
@@ -49,9 +56,11 @@ def calibrate_mic(seconds=1.5):
 # Calibrate automatically as soon as the assistant boots
 calibrate_mic()
 
-def _record_dynamic(max_seconds=10, idle_timeout=60):
+def _record_dynamic(max_seconds=10, idle_timeout=60, current_vad_mode=VAD_MODE):
     """Waits for voice, then records until silence is detected. Returns TIMEOUT if completely silent."""
-    print("🔴 Sara is Listening...")
+    print(f"🔴 Sara is Listening... (VAD Mode: {current_vad_mode})")
+    
+    local_vad = webrtcvad.Vad(current_vad_mode)
     
     # WebRTCVAD accepts 10, 20, or 30 ms frames. We use 30 ms.
     chunk_length_ms = 30
@@ -61,6 +70,7 @@ def _record_dynamic(max_seconds=10, idle_timeout=60):
     pre_buffer = []  # Keep a short buffer of audio before voice triggers
     
     has_spoken = False
+    consecutive_speech_chunks = 0
     silent_chunks = 0
     speech_chunks = 0
     start_time = time.time()
@@ -85,7 +95,7 @@ def _record_dynamic(max_seconds=10, idle_timeout=60):
             pcm_data = (np.clip(data, -1.0, 1.0) * 32767).astype(np.int16).tobytes()
             
             try:
-                is_speech = vad.is_speech(pcm_data, SAMPLE_RATE)
+                is_speech = local_vad.is_speech(pcm_data, SAMPLE_RATE)
             except Exception as e:
                 is_speech = False
                 
@@ -107,6 +117,12 @@ def _record_dynamic(max_seconds=10, idle_timeout=60):
                     pre_buffer.pop(0)  # Keep only the most recent chunks
                     
                 if is_valid_speech:
+                    consecutive_speech_chunks += 1
+                else:
+                    consecutive_speech_chunks = 0
+
+                # Require MIN_SPEECH_CHUNKS to trigger recording
+                if consecutive_speech_chunks >= MIN_SPEECH_CHUNKS:
                     has_spoken = True
                     if DEBUG_AUDIO: print("\n🗣️ Sound detected, recording...")
                     else: print("🗣️ Sound detected, recording...")
@@ -142,7 +158,9 @@ def _record_dynamic(max_seconds=10, idle_timeout=60):
     # --- NOISE REDUCTION ---
     if DEBUG_AUDIO: print("🧹 Applying noise reduction...")
     try:
-        reduced_audio = nr.reduce_noise(y=audio_array, sr=SAMPLE_RATE, prop_decrease=0.8)
+        import noisereduce as nr
+        # Balanced noise reduction
+        reduced_audio = nr.reduce_noise(y=audio_array, sr=SAMPLE_RATE, prop_decrease=0.75, n_fft=1024)
         return reduced_audio
     except Exception as e:
         print("❌ Noise reduction failed:", e)
@@ -154,7 +172,15 @@ def _transcribe(audio):
     if len(audio) < 8000:
         return "", None
 
+    # Lazy-load the model only when it's time to transcribe
+    try:
+        model = get_whisper_model()
+    except Exception as e:
+        print(f"❌ Could not load Whisper model: {e}")
+        return "[Voice Error: Torch DLL failure]", None
+
     # condition_on_previous_text=False stops Whisper from hallucinating/repeating itself on weird noises
+    # No language specified to allow Whisper's auto-detection
     result = model.transcribe(audio, fp16=False, condition_on_previous_text=False)
     text = result.get("text", "").strip().lower()
 
@@ -164,11 +190,19 @@ def _transcribe(audio):
     return text, result.get("language")
 
 
-def listen(idle_timeout=60):
+def listen(idle_timeout=60, retries=1):
     try:
-        audio_or_timeout = _record_dynamic(max_seconds=10, idle_timeout=idle_timeout)
+        # Try with current aggressiveness
+        audio_or_timeout = _record_dynamic(max_seconds=10, idle_timeout=idle_timeout, current_vad_mode=VAD_MODE)
+        
         if isinstance(audio_or_timeout, str) and audio_or_timeout == "TIMEOUT":
             return "TIMEOUT", None
+            
+        # If no speech was actually recorded but retries remain, try less aggressive VAD
+        if (not isinstance(audio_or_timeout, str)) and len(audio_or_timeout) < 1 and retries > 0:
+            if DEBUG_AUDIO: print("⚠️ No speech detected, retrying with lower VAD mode...")
+            return listen(idle_timeout=20, retries=retries-1) # Shorter timeout for retry
+
         return _transcribe(audio_or_timeout)
     except Exception as e:
         print("❌ Error:", e)
@@ -176,4 +210,4 @@ def listen(idle_timeout=60):
 
 
 def listen_command():
-    return listen()
+    return listen(idle_timeout=15, retries=1) # Listen for command after wake word with retry

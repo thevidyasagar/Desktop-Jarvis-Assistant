@@ -77,39 +77,24 @@ Output: [{"action": "SET_SYSTEM", "value": {"type": "brightness", "value": 100}}
 User: "WiFi band kardo"
 Output: [{"action": "SET_SYSTEM", "value": {"type": "wifi", "value": "off"}}]
 
-User: "Cleanup my computer"
-(Assuming no prior confirmation)
-Output: [{"action": "CONVERSATION", "value": None}]
+User: "Chrome band kar do"
+Output: [{"action": "CLOSE_CURRENT_WINDOW", "value": None}]
 
-User: "Switch the window"
-Output: [{"action": "HOTKEY", "value": ["alt", "tab"]}]
-
-User: "Find my resume and open it"
+User: "Mera resume dhoondo"
 Output: [{"action": "SEARCH_FILE", "value": "resume"}]
 
-User: "Delete the old log file"
+User: "Notepad mein likho ki kal meeting hai"
+Output: [{"action": "OPEN_APP", "value": "notepad"}, {"action": "TYPE_TEXT", "value": "Kal meeting hai"}]
+
+User: "Agle gaane pe jao"
+Output: [{"action": "MEDIA_NEXT", "value": None}]
+
+User: "Cleanup my computer"
 (Assuming no prior confirmation)
-Output: [{"action": "CONVERSATION", "value": None}]
-
-User: "Create a python project for a weather scraper"
-Output: [{"action": "CREATE_PROJECT", "value": "weather_scraper"}, {"action": "WRITE_FILE", "value": {"project": "weather_scraper", "path": "main.py", "content": "...source..."}}, {"action": "OPEN_APP", "value": "vscode:weather_scraper"}]
-
-User: "Run the scraper script"
-Output: [{"action": "RUN_CODE", "value": {"project": "weather_scraper", "path": "main.py"}}]
-
-User: "Notepad kholo aur likho hello world"
-Output: [{"action": "OPEN_APP", "value": "notepad"}, {"action": "TYPE_TEXT", "value": "hello world"}]
-
-User: "Youtube pe pathaan movie ka trailer dikhao"
-Output: [{"action": "YOUTUBE_SEARCH", "value": "pathaan movie trailer"}]
-
-User: "Volume kam karde thodi"
-Output: [{"action": "VOLUME_DOWN", "value": None}]
-User: "5 minute baad mujhe batana ki khaana ready hai"
-Output: [{"action": "SCHEDULE_REMINDER", "value": {"delay_seconds": 300, "message": "Khaana ready hai"}}]
+Output: [{"action": "CONVERSATION", "value": "Sir, should I proceed with the system cleanup?"}]
 
 User: "Ab so jao pc ko bhi band kardu" (Assuming no prior confirmation history)
-Output: [{"action": "CONVERSATION", "value": None}]
+Output: [{"action": "CONVERSATION", "value": "Sir, would you like me to shut down the system?"}]
 """
 
 def generate_plan(user_input, context_str=None):

@@ -2,9 +2,11 @@ import os
 import webbrowser
 import subprocess
 import time
+import random
 import smtplib
 import pyautogui
 from email.mime.text import MIMEText
+from voice.speak import speak
 
 # Try importing the new modules, gracefully degrading if not available yet
 try:
@@ -20,6 +22,8 @@ except ImportError as e:
 # =========================
 
 def open_app(app_name):
+    speak("Ji Sir... open kar rahi hoon...")
+    time.sleep(random.uniform(0.5, 1.0))
     try:
         if ":" in app_name: # Handle specialized app targets like vscode:project
             tag, project = app_name.split(":", 1)
@@ -112,16 +116,15 @@ def execute_action(action_dict):
         # Safety Fail-Safe: Moving mouse to any corner of the screen stops the procedure
         pyautogui.FAILSAFE = True
         
-        # Give a generous delay for the app window to focus (e.g. after OPEN_APP)
-        # In a real scenario, we could use pyautogui.getWindowsWithTitle(value) 
-        # but let's stick to a robust delay and a safe click to ensure focus.
-        print("⏳ Preparing to type... Move mouse to a corner to STOP.")
-        time.sleep(2.0)
+        print("⏳ Preparing to type realistically... Move mouse to a corner to STOP.")
+        time.sleep(1.0)
         
-        # Typing with a safe interval to ensure the application registers all characters
-        # especially for complex code with indentation.
-        pyautogui.write(value, interval=0.01)
-        return "Finished typing. (Failsafe active: move mouse to corner to interrupt)"
+        # Simulating realistic typing character by character
+        for char in value:
+            pyautogui.write(char)
+            time.sleep(random.uniform(0.03, 0.08))
+            
+        return "Finished realistic typing."
 
     if action in ["VOLUME_UP", "VOLUME_DOWN", "VOLUME_MUTE"]:
         return volume_control(action.split("_")[-1]) # UP, DOWN, MUTE

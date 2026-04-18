@@ -2,79 +2,128 @@ import os
 import subprocess
 import webbrowser
 import urllib.parse
+import time
+import random
+import pyautogui
+
+def simulate_typing_search(base_url, query, focus_hotkey=None):
+    """Helper to open a page, focus search, and type realistically."""
+    webbrowser.open(base_url)
+    time.sleep(3.0)  # Wait for page to realistically load
+    
+    if focus_hotkey:
+        pyautogui.press(focus_hotkey)
+        time.sleep(0.5)
+        
+    for char in query:
+        pyautogui.write(char)
+        time.sleep(random.uniform(0.03, 0.08))
+        
+    time.sleep(0.3)
+    pyautogui.press('enter')
 
 def google_search(query):
-    """Searches Google for the given query."""
+    """Searches Google for the given query realistically."""
     if not query:
-        return "Plese provide a subject to search."
+        return "Please provide a subject to search."
     try:
-        url = f"https://www.google.com/search?q={urllib.parse.quote(query)}"
-        webbrowser.open(url)
+        # Google homepage auto-focuses the search box
+        simulate_typing_search("https://www.google.com", query)
         return f"Searching Google for {query}."
     except Exception as e:
         print("Google Search Error:", e)
         return "Failed to perform Google search."
 
 def youtube_search(query):
-    """Searches YouTube for the given query."""
+    """Searches YouTube for the given query realistically."""
     if not query:
         webbrowser.open("https://www.youtube.com")
         return "Opening YouTube."
     try:
-        url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}"
-        webbrowser.open(url)
+        # YouTube uses '/' hotkey to focus search bar
+        simulate_typing_search("https://www.youtube.com", query, focus_hotkey='/')
         return f"Searching YouTube for {query}."
     except Exception as e:
         print("YouTube Search Error:", e)
         return "Failed to perform YouTube search."
 
 def wikipedia_search(query):
-    """Searches Wikipedia for the given query."""
+    """Searches Wikipedia realistically."""
     if not query:
         webbrowser.open("https://www.wikipedia.org")
         return "Opening Wikipedia."
     try:
-        url = f"https://en.wikipedia.org/wiki/Special:Search?search={urllib.parse.quote(query)}"
-        webbrowser.open(url)
+        # We can just focus address bar and use wikipedia's search endpoint via omnibox,
+        # or load Wikipedia and since it doesn't have a universal hotkey, just search google for "wikipedia {query}"
+        # For simplicity and given prompt constraints, we'll try to use the omnibox search logic.
+        webbrowser.open("about:blank")
+        time.sleep(1.0)
+        pyautogui.hotkey('ctrl', 'l')
+        time.sleep(0.5)
+        
+        full_query = f"site:wikipedia.org {query}"
+        for char in full_query:
+            pyautogui.write(char)
+            time.sleep(random.uniform(0.03, 0.08))
+            
+        pyautogui.press('enter')
         return f"Searching Wikipedia for {query}."
     except Exception as e:
         print("Wikipedia Search Error:", e)
         return "Failed to perform Wikipedia search."
 
 def duckduckgo_search(query):
-    """Searches DuckDuckGo for the given query."""
     if not query:
         webbrowser.open("https://duckduckgo.com")
         return "Opening DuckDuckGo."
     try:
-        url = f"https://duckduckgo.com/?q={urllib.parse.quote(query)}"
-        webbrowser.open(url)
+        # DuckDuckGo auto-focuses on homepage
+        simulate_typing_search("https://duckduckgo.com", query)
         return f"Searching DuckDuckGo for {query}."
     except Exception as e:
         print("DuckDuckGo Search Error:", e)
         return "Failed to perform DuckDuckGo search."
 
 def amazon_search(query):
-    """Searches Amazon for the given query."""
     if not query:
         webbrowser.open("https://www.amazon.com")
         return "Opening Amazon."
     try:
-        url = f"https://www.amazon.com/s?k={urllib.parse.quote(query)}"
-        webbrowser.open(url)
+        # Amazon search bar doesn't consistently auto-focus or have a hotkey.
+        # We'll use the browser's address bar to query amazon.
+        webbrowser.open("about:blank")
+        time.sleep(1.0)
+        pyautogui.hotkey('ctrl', 'l')
+        time.sleep(0.5)
+        
+        full_query = f"https://www.amazon.com/s?k="
+        pyautogui.write(full_query, interval=0.01) # Write base URL fast
+        # Then type query realistically
+        for char in query:
+            pyautogui.write(char)
+            time.sleep(random.uniform(0.03, 0.08))
+        pyautogui.press('enter')
+        
         return f"Searching Amazon for {query}."
     except Exception as e:
         print("Amazon Search Error:", e)
         return "Failed to perform Amazon search."
 
 def stackoverflow_search(query):
-    """Searches StackOverflow for the given query."""
     if not query:
         webbrowser.open("https://stackoverflow.com")
         return "Opening Stack Overflow."
     try:
-        url = f"https://stackoverflow.com/search?q={urllib.parse.quote(query)}"
-        webbrowser.open(url)
+        webbrowser.open("about:blank")
+        time.sleep(1.0)
+        pyautogui.hotkey('ctrl', 'l')
+        time.sleep(0.5)
+        
+        full_query = f"site:stackoverflow.com {query}"
+        for char in full_query:
+            pyautogui.write(char)
+            time.sleep(random.uniform(0.03, 0.08))
+        pyautogui.press('enter')
         return f"Searching Stack Overflow for {query}."
     except Exception as e:
         print("Stack Overflow Search Error:", e)

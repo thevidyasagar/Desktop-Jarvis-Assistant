@@ -1,9 +1,9 @@
+python-dotenv
 sounddevice
 numpy
 openai-whisper
 edge-tts
 pygame
-PyQt5
 opencv-python
 pyautogui
 google-genai
